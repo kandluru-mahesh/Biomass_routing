@@ -1,5 +1,3 @@
-# streamlit_app.py
-
 import streamlit as st
 import pandas as pd
 from geopy.distance import geodesic
@@ -46,12 +44,11 @@ if st.button("Generate Routes"):
             row = []
             for loc2 in locations:
                 dist = geodesic(loc1, loc2).km
-                row.append(int(dist * 1000))
+                row.append(int(dist * 1000))  # meters
             matrix.append(row)
         return matrix
 
     distance_matrix = compute_distance_matrix(locations)
-
     num_vehicles = len(df)
     depot = 0
     manager = pywrapcp.RoutingIndexManager(len(distance_matrix), num_vehicles, depot)
@@ -73,8 +70,15 @@ if st.button("Generate Routes"):
     solution = routing.SolveWithParameters(search_parameters)
 
     if solution:
-        all_routes = []
         tractor_count = 1
+        route_data = {
+            'Tractor': [],
+            'Stop Order': [],
+            'Name': [],
+            'Quantity (kg)': [],
+            'Google Maps Link': []
+        }
+
         for vehicle_id in range(num_vehicles):
             index = routing.Start(vehicle_id)
             route = []
@@ -87,6 +91,7 @@ if st.button("Generate Routes"):
             route.append(manager.IndexToNode(index))
 
             if len(route) > 2:
+                # Generate Google Maps link
                 gmap_base = "https://www.google.com/maps/dir/"
                 waypoints = [f"{locations[i][0]},{locations[i][1]}" for i in route]
                 gmap_link = gmap_base + "/".join(waypoints)
@@ -94,23 +99,29 @@ if st.button("Generate Routes"):
                 for stop_index, i in enumerate(route):
                     name = 'Warehouse' if i == 0 else df.iloc[i - 1]['Name']
                     qty = 0 if i == 0 else df.iloc[i - 1]['Quantity']
-                    all_routes.append({
-                        'Tractor': tractor_count,
-                        'Stop Order': stop_index + 1,
-                        'Name': name,
-                        'Quantity (kg)': qty,
-                        'Google Maps Link': gmap_link
-                    })
+
+                    route_data['Tractor'].append(tractor_count if stop_index == 0 else "")
+                    route_data['Stop Order'].append(stop_index + 1)
+                    route_data['Name'].append(name)
+                    route_data['Quantity (kg)'].append(qty)
+                    route_data['Google Maps Link'].append(gmap_link if stop_index == 0 else "")
+
                 tractor_count += 1
 
-        route_df = pd.DataFrame(all_routes)
+        route_df = pd.DataFrame(route_data)
         st.success(f"✅ Found {tractor_count - 1} optimized routes.")
         st.dataframe(route_df)
 
-        # Download Excel
+        # --- Download Excel ---
         buffer = BytesIO()
         with pd.ExcelWriter(buffer, engine='xlsxwriter') as writer:
             route_df.to_excel(writer, sheet_name=biomass_type, index=False)
-        st.download_button("📥 Download Routes as Excel", data=buffer.getvalue(), file_name='routes.xlsx', mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+        st.download_button(
+            label="📥 Download Routes as Excel",
+            data=buffer.getvalue(),
+            file_name=f'{biomass_type}_routes.xlsx',
+            mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        )
+
     else:
         st.error("❌ No route solution found.")
