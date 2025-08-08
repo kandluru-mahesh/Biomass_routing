@@ -20,13 +20,23 @@ tractor_capacity = st.number_input("🛻 Tractor Capacity (kg):", min_value=100,
 st.subheader("📤 Upload Supplier Data (Google Sheet or Excel/CSV)")
 uploaded_file = st.file_uploader("Upload File", type=['xlsx', 'csv'])
 
-if uploaded_file:
-    try:
-        # Read uploaded data
-        if uploaded_file.name.endswith('.csv'):
-            df_full = pd.read_csv(uploaded_file)
-        else:
-            df_full = pd.read_excel(uploaded_file)
+try:
+    if uploaded_file.name.endswith('.csv'):
+        df_full = pd.read_csv(uploaded_file)
+    elif uploaded_file.name.endswith('.xlsx'):
+        try:
+            import openpyxl  # Try importing before using it
+            df_full = pd.read_excel(uploaded_file, engine='openpyxl')
+        except ImportError:
+            st.error("❌ You need to install the `openpyxl` package to read Excel files.\n\nRun: `pip install openpyxl`")
+            st.stop()
+    else:
+        st.error("❌ Unsupported file format. Please upload a .csv or .xlsx file.")
+        st.stop()
+except Exception as e:
+    st.error(f"⚠️ Error reading file: {e}")
+    st.stop()
+
 
         # Validate columns
         required_cols = {'Supplier Name (Farmer Name)', 'Latitude of the location', 'Longitude of the location', 'Biomass Type', 'Biomass Quantity'}
