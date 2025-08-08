@@ -1,5 +1,6 @@
 streamlit
 pandas
 geopy
+openpyxl
 ortools
 xlsxwriter
