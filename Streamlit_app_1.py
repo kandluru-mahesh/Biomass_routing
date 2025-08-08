@@ -29,9 +29,9 @@ if uploaded_file:
             df_full = pd.read_excel(uploaded_file)
 
         # Validate columns
-        required_cols = {'Supplier Name (Farmer's Name)', 'Latitude of the location', 'Longitude of the location', 'Biomass Type', 'Biomass Quantity'}
+        required_cols = {'Supplier Name (Farmer Name)', 'Latitude of the location', 'Longitude of the location', 'Biomass Type', 'Biomass Quantity'}
         if not required_cols.issubset(df_full.columns):
-            st.error("❌ File must contain the columns: Supplier Name (Farmer's Name), Latitude of the location, Longitude of the location, Biomass Type, Biomass Quantity")
+            st.error("❌ File must contain the columns: Supplier Name (Farmer Name), Latitude of the location, Longitude of the location, Biomass Type, Biomass Quantity")
         else:
             # Select biomass type
             biomass_type = st.selectbox("🌿 Select Biomass Type:", df_full['Type'].unique())
