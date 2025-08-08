@@ -7,7 +7,33 @@ from io import BytesIO
 st.set_page_config(page_title="Biomass Route Optimizer", layout="wide")
 st.title("🚜 Biomass Route Optimizer")
 
-# --- User Inputs ---
+# --- 🔄 Split Function for Oversized Loads ---
+def split_oversized_suppliers(df, capacity):
+    new_rows = []
+    for idx, row in df.iterrows():
+        qty = row['Biomass Quantity']
+        if qty <= capacity:
+            new_rows.append(row)
+        else:
+            n_chunks = qty // capacity
+            remainder = qty % capacity
+
+            # Full-capacity chunks
+            for i in range(int(n_chunks)):
+                chunk = row.copy()
+                chunk['Biomass Quantity'] = capacity
+                chunk['Supplier Name (Farmer Name)'] += f" (Split-{i+1})"
+                new_rows.append(chunk)
+
+            # Remaining load
+            if remainder > 0:
+                chunk = row.copy()
+                chunk['Biomass Quantity'] = remainder
+                chunk['Supplier Name (Farmer Name)'] += f" (Split-R)"
+                new_rows.append(chunk)
+    return pd.DataFrame(new_rows)
+
+# --- 📍 Warehouse & Capacity Input ---
 with st.expander("📍 Enter Warehouse Location"):
     warehouse_lat = st.number_input("Warehouse Latitude", format="%.6f", value=14.083970)
     warehouse_lon = st.number_input("Warehouse Longitude", format="%.6f", value=79.794420)
@@ -15,7 +41,7 @@ warehouse = ('Warehouse', warehouse_lat, warehouse_lon)
 
 tractor_capacity = st.number_input("🛻 Tractor Capacity (kg):", min_value=100, step=100, value=2000)
 
-# --- File Upload ---
+# --- 📤 Upload Supplier File ---
 st.subheader("📤 Upload Supplier Data (.csv or .xlsx)")
 uploaded_file = st.file_uploader("Choose a file", type=['xlsx', 'csv'])
 st.caption("💡 Required columns: 'Supplier Name (Farmer Name)', 'Latitude of the location', 'Longitude of the location', 'Biomass Type', 'Biomass Quantity'")
@@ -35,7 +61,7 @@ if uploaded_file:
             st.error("❌ Unsupported file format. Please upload a .csv or .xlsx file.")
             st.stop()
 
-        # Validate required columns
+        # ✅ Validate required columns
         required_cols = {
             'Supplier Name (Farmer Name)',
             'Latitude of the location',
@@ -45,7 +71,7 @@ if uploaded_file:
         }
 
         if not required_cols.issubset(df_full.columns):
-            st.error("❌ File must contain the following columns exactly:\n\n"
+            st.error("❌ Your file must contain the following columns exactly:\n\n"
                      "- Supplier Name (Farmer Name)\n"
                      "- Latitude of the location\n"
                      "- Longitude of the location\n"
@@ -53,12 +79,15 @@ if uploaded_file:
                      "- Biomass Quantity")
             st.stop()
 
-        # Select biomass type
+        # 🌿 Select Biomass Type
         biomass_type = st.selectbox("🌿 Select Biomass Type:", df_full['Biomass Type'].unique())
 
         if st.button("Generate Routes"):
+            # 🎯 Filter and split oversized loads
             df = df_full[df_full['Biomass Type'] == biomass_type].reset_index(drop=True)
+            df = split_oversized_suppliers(df, tractor_capacity)
 
+            # 📍 Build distance matrix
             locations = [(warehouse[1], warehouse[2])] + list(zip(df['Latitude of the location'], df['Longitude of the location']))
             demands = [0] + df['Biomass Quantity'].tolist()
 
@@ -134,7 +163,7 @@ if uploaded_file:
                 st.success(f"✅ Found {tractor_count - 1} optimized routes.")
                 st.dataframe(route_df)
 
-                # --- Download Excel ---
+                # 💾 Download Excel
                 buffer = BytesIO()
                 with pd.ExcelWriter(buffer, engine='xlsxwriter') as writer:
                     route_df.to_excel(writer, sheet_name=biomass_type, index=False)
@@ -144,7 +173,6 @@ if uploaded_file:
                     file_name=f'{biomass_type}_routes.xlsx',
                     mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
                 )
-
             else:
                 st.error("❌ No route solution found.")
     except Exception as e:
