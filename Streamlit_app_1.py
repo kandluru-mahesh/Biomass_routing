@@ -161,7 +161,7 @@ if uploaded_file:
                             name = 'Warehouse' if i == 0 else df.iloc[i - 1]['Supplier Name (Farmer Name)']
                             qty = 0 if i == 0 else df.iloc[i - 1]['Biomass Quantity']
                             util_str = f"{utilization:.1f}%" if stop_index == 0 else ""
-                            highlight = utilization < 50 and stop_index == 0
+                            highlight = utilization < 60 and stop_index == 0
 
                             route_data['Tractor'].append(f"Tractor {tractor_count}" if stop_index == 0 else "")
                             route_data['Stop Order'].append(stop_index + 1)
