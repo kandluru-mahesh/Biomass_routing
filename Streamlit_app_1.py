@@ -124,49 +124,84 @@ if uploaded_file:
 
             if solution:
                 tractor_count = 1
-                route_data = {
-                    'Tractor': [],
-                    'Stop Order': [],
-                    'Name': [],
-                    'Quantity (kg)': [],
-                    'Google Maps Link': []
-                }
+route_data = {
+    'Tractor': [],
+    'Stop Order': [],
+    'Name': [],
+    'Quantity (kg)': [],
+    'Utilization (%)': [],
+    'Google Maps Link': [],
+    'Highlight': []  # for Excel coloring
+}
 
-                for vehicle_id in range(num_vehicles):
-                    index = routing.Start(vehicle_id)
-                    route = []
-                    while not routing.IsEnd(index):
-                        node_index = manager.IndexToNode(index)
-                        route.append(node_index)
-                        index = solution.Value(routing.NextVar(index))
-                    route.append(manager.IndexToNode(index))
+utilization_tracker = {}  # To store utilization by tractor
 
-                    if len(route) > 2:
-                        # Generate Google Maps link
-                        gmap_base = "https://www.google.com/maps/dir/"
-                        waypoints = [f"{locations[i][0]},{locations[i][1]}" for i in route]
-                        gmap_link = gmap_base + "/".join(waypoints)
+for vehicle_id in range(num_vehicles):
+    index = routing.Start(vehicle_id)
+    route = []
+    load_this_route = 0
+    while not routing.IsEnd(index):
+        node_index = manager.IndexToNode(index)
+        route.append(node_index)
+        if node_index != 0:
+            load_this_route += demands[node_index]
+        index = solution.Value(routing.NextVar(index))
+    route.append(manager.IndexToNode(index))
 
-                        for stop_index, i in enumerate(route):
-                            name = 'Warehouse' if i == 0 else df.iloc[i - 1]['Supplier Name (Farmer Name)']
-                            qty = 0 if i == 0 else df.iloc[i - 1]['Biomass Quantity']
+    if len(route) > 2:
+        utilization = (load_this_route / tractor_capacity) * 100
+        utilization_tracker[tractor_count] = utilization
 
-                            route_data['Tractor'].append(tractor_count if stop_index == 0 else "")
-                            route_data['Stop Order'].append(stop_index + 1)
-                            route_data['Name'].append(name)
-                            route_data['Quantity (kg)'].append(qty)
-                            route_data['Google Maps Link'].append(gmap_link if stop_index == 0 else "")
+        gmap_base = "https://www.google.com/maps/dir/"
+        waypoints = [f"{locations[i][0]},{locations[i][1]}" for i in route]
+        gmap_link = gmap_base + "/".join(waypoints)
 
-                        tractor_count += 1
+        for stop_index, i in enumerate(route):
+            name = 'Warehouse' if i == 0 else df.iloc[i - 1]['Supplier Name (Farmer Name)']
+            qty = 0 if i == 0 else df.iloc[i - 1]['Biomass Quantity']
+            util_str = f"{utilization:.1f}%" if stop_index == 0 else ""
+            highlight = utilization < 50 and stop_index == 0
+
+            route_data['Tractor'].append(f"Tractor {tractor_count}" if stop_index == 0 else "")
+            route_data['Stop Order'].append(stop_index + 1)
+            route_data['Name'].append(name)
+            route_data['Quantity (kg)'].append(qty)
+            route_data['Utilization (%)'].append(util_str)
+            route_data['Google Maps Link'].append(gmap_link if stop_index == 0 else "")
+            route_data['Highlight'].append(highlight)
+
+        tractor_count += 1
+
 
                 route_df = pd.DataFrame(route_data)
                 st.success(f"✅ Found {tractor_count - 1} optimized routes.")
                 st.dataframe(route_df)
 
                 # 💾 Download Excel
-                buffer = BytesIO()
-                with pd.ExcelWriter(buffer, engine='xlsxwriter') as writer:
-                    route_df.to_excel(writer, sheet_name=biomass_type, index=False)
+route_df = pd.DataFrame(route_data)
+st.success(f"✅ Found {tractor_count - 1} optimized routes.")
+st.dataframe(route_df.drop(columns=['Highlight']))  # Hide highlight column in UI
+
+# 💾 Download Excel
+buffer = BytesIO()
+with pd.ExcelWriter(buffer, engine='xlsxwriter') as writer:
+    route_df.drop(columns=['Highlight']).to_excel(writer, sheet_name=biomass_type, index=False)
+    workbook = writer.book
+    worksheet = writer.sheets[biomass_type]
+
+    # Apply yellow fill to rows where 'Highlight' is True
+    yellow_fill = workbook.add_format({'bg_color': '#FFFF00'})
+    for row_num, highlight in enumerate(route_df['Highlight'], start=1):  # start=1 to skip header
+        if highlight:
+            worksheet.set_row(row_num, None, yellow_fill)
+
+st.download_button(
+    label="📥 Download Routes as Excel",
+    data=buffer.getvalue(),
+    file_name=f'{biomass_type}_routes.xlsx',
+    mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+)
+
                 st.download_button(
                     label="📥 Download Routes as Excel",
                     data=buffer.getvalue(),
