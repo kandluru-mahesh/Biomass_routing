@@ -67,7 +67,7 @@ if uploaded_file:
             'Latitude of the location',
             'Longitude of the location',
             'Biomass Type',
-            'Biomass Quantity'
+            'Biomass Quantity (kg)'
         }
 
         if not required_cols.issubset(df_full.columns):
