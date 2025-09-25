@@ -76,7 +76,7 @@ if uploaded_file:
                      "- Latitude of the location\n"
                      "- Longitude of the location\n"
                      "- Biomass Type\n"
-                     "- Biomass Quantity")
+                     "- Biomass Quantity (kg)")
             st.stop()
 
         # 🌿 Select Biomass Type
@@ -159,7 +159,7 @@ if uploaded_file:
 
                         for stop_index, i in enumerate(route):
                             name = 'Warehouse' if i == 0 else df.iloc[i - 1]['Supplier Name (Farmer Name)']
-                            qty = 0 if i == 0 else df.iloc[i - 1]['Biomass Quantity']
+                            qty = 0 if i == 0 else df.iloc[i - 1]['Biomass Quantity (kg)']
                             util_str = f"{utilization:.1f}%" if stop_index == 0 else ""
                             highlight = utilization < 60 and stop_index == 0
 
