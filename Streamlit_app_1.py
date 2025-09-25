@@ -21,14 +21,14 @@ def split_oversized_suppliers(df, capacity):
             # Full-capacity chunks
             for i in range(int(n_chunks)):
                 chunk = row.copy()
-                chunk['Biomass Quantity'] = capacity
+                chunk['Biomass Quantity (kg)'] = capacity
                 chunk['Supplier Name (Farmer Name)'] += f" (Split-{i+1})"
                 new_rows.append(chunk)
 
             # Remaining load
             if remainder > 0:
                 chunk = row.copy()
-                chunk['Biomass Quantity'] = remainder
+                chunk['Biomass Quantity (kg)'] = remainder
                 chunk['Supplier Name (Farmer Name)'] += f" (Split-R)"
                 new_rows.append(chunk)
     return pd.DataFrame(new_rows)
