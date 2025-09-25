@@ -11,7 +11,7 @@ st.title("🚜 Biomass Route Optimizer")
 def split_oversized_suppliers(df, capacity):
     new_rows = []
     for idx, row in df.iterrows():
-        qty = row['Biomass Quantity (kg)']
+        qty = row['Biomass Quantity']
         if qty <= capacity:
             new_rows.append(row)
         else:
@@ -21,14 +21,14 @@ def split_oversized_suppliers(df, capacity):
             # Full-capacity chunks
             for i in range(int(n_chunks)):
                 chunk = row.copy()
-                chunk['Biomass Quantity (kg)'] = capacity
+                chunk['Biomass Quantity'] = capacity
                 chunk['Supplier Name (Farmer Name)'] += f" (Split-{i+1})"
                 new_rows.append(chunk)
 
             # Remaining load
             if remainder > 0:
                 chunk = row.copy()
-                chunk['Biomass Quantity (kg)'] = remainder
+                chunk['Biomass Quantity'] = remainder
                 chunk['Supplier Name (Farmer Name)'] += f" (Split-R)"
                 new_rows.append(chunk)
     return pd.DataFrame(new_rows)
@@ -67,7 +67,7 @@ if uploaded_file:
             'Latitude of the location',
             'Longitude of the location',
             'Biomass Type',
-            'Biomass Quantity (kg)'
+            'Biomass Quantity'
         }
 
         if not required_cols.issubset(df_full.columns):
@@ -76,7 +76,7 @@ if uploaded_file:
                      "- Latitude of the location\n"
                      "- Longitude of the location\n"
                      "- Biomass Type\n"
-                     "- Biomass Quantity (kg)")
+                     "- Biomass Quantity")
             st.stop()
 
         # 🌿 Select Biomass Type
@@ -159,7 +159,7 @@ if uploaded_file:
 
                         for stop_index, i in enumerate(route):
                             name = 'Warehouse' if i == 0 else df.iloc[i - 1]['Supplier Name (Farmer Name)']
-                            qty = 0 if i == 0 else df.iloc[i - 1]['Biomass Quantity (kg)']
+                            qty = 0 if i == 0 else df.iloc[i - 1]['Biomass Quantity']
                             util_str = f"{utilization:.1f}%" if stop_index == 0 else ""
                             highlight = utilization < 60 and stop_index == 0
 
