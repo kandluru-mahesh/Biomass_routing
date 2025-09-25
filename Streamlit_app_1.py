@@ -11,7 +11,7 @@ st.title("🚜 Biomass Route Optimizer")
 def split_oversized_suppliers(df, capacity):
     new_rows = []
     for idx, row in df.iterrows():
-        qty = row['Biomass Quantity']
+        qty = row['Biomass Quantity (kg)']
         if qty <= capacity:
             new_rows.append(row)
         else:
